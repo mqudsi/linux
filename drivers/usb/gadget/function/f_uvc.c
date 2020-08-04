@@ -682,15 +682,19 @@ uvc_function_bind(struct usb_configuration *c, struct usb_function *f)
 	uvc_streaming_intf_alt1.iInterface = ret;
 
 	/* Allocate interface IDs. */
-	if ((ret = usb_interface_id(c, f)) < 0)
+	if ((ret = usb_interface_id(c, f)) < 0) {
+		uvcg_err(f, "Unable to allocate control interface ID\n");
 		goto error;
+	}
 	uvc_iad.bFirstInterface = ret;
 	uvc_control_intf.bInterfaceNumber = ret;
 	uvc->control_intf = ret;
 	opts->control_interface = ret;
 
-	if ((ret = usb_interface_id(c, f)) < 0)
+	if ((ret = usb_interface_id(c, f)) < 0) {
+		uvcg_err(f, "Unable to allocate streaming interface ID\n");
 		goto error;
+	}
 	uvc_streaming_intf_alt0.bInterfaceNumber = ret;
 	uvc_streaming_intf_alt1.bInterfaceNumber = ret;
 	uvc->streaming_intf = ret;
@@ -699,6 +703,7 @@ uvc_function_bind(struct usb_configuration *c, struct usb_function *f)
 	/* Copy descriptors */
 	f->fs_descriptors = uvc_copy_descriptors(uvc, USB_SPEED_FULL);
 	if (IS_ERR(f->fs_descriptors)) {
+		uvcg_err(f, "Unable to copy usb full-speed descriptors\n");
 		ret = PTR_ERR(f->fs_descriptors);
 		f->fs_descriptors = NULL;
 		goto error;
@@ -706,6 +711,7 @@ uvc_function_bind(struct usb_configuration *c, struct usb_function *f)
 	if (gadget_is_dualspeed(cdev->gadget)) {
 		f->hs_descriptors = uvc_copy_descriptors(uvc, USB_SPEED_HIGH);
 		if (IS_ERR(f->hs_descriptors)) {
+			uvcg_err(f, "Unable to copy usb high-speed descriptors\n");
 			ret = PTR_ERR(f->hs_descriptors);
 			f->hs_descriptors = NULL;
 			goto error;
@@ -714,6 +720,7 @@ uvc_function_bind(struct usb_configuration *c, struct usb_function *f)
 	if (gadget_is_superspeed(c->cdev->gadget)) {
 		f->ss_descriptors = uvc_copy_descriptors(uvc, USB_SPEED_SUPER);
 		if (IS_ERR(f->ss_descriptors)) {
+			uvcg_err(f, "Unable to copy usb super-speed descriptors\n");
 			ret = PTR_ERR(f->ss_descriptors);
 			f->ss_descriptors = NULL;
 			goto error;
@@ -739,8 +746,10 @@ uvc_function_bind(struct usb_configuration *c, struct usb_function *f)
 
 	/* Initialise video. */
 	ret = uvcg_video_init(&uvc->video, uvc);
-	if (ret < 0)
+	if (ret < 0) {
+		uvcg_err(f, "failed to initialize uvc video device");
 		goto error;
+	}
 
 	/* Register a V4L2 device. */
 	ret = uvc_register_video(uvc);
